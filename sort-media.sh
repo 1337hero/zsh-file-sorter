@@ -23,6 +23,7 @@ process_file() {
     local file="$1"
     local filename=${file:t}
     local file_type="$2"  # New parameter to specify if it's a photo or video
+    local working_dir="$3"  # New parameter for the working directory
     
     # Skip the script itself
     if [[ "$filename" = "sort_images.sh" ]]; then
@@ -43,7 +44,7 @@ process_file() {
         fi
         
         # Create year and month directories under the appropriate media type folder
-        local base_dir="${file_type}s"  # Will become "photos" or "videos"
+        local base_dir="$working_dir/${file_type}s"  # Will become "photos" or "videos" in the target directory
         local target_dir="$base_dir/$year/${month}_${month_name}"
         mkdir -p "$target_dir"
         
@@ -67,22 +68,30 @@ process_file() {
 
 # Main script
 print "Starting media organization..."
-print "Looking in current directory..."
+
+# Get target directory from first argument, default to current directory if not provided
+target_dir="${1:-.}"
+if [[ ! -d "$target_dir" ]]; then
+    print "Error: Directory '$target_dir' does not exist"
+    exit 1
+fi
+
+print "Looking in directory: $target_dir"
 
 # Process all image files
-for ext in jpg jpeg png heic HEIC JPG JPEG PNG; do
-    for file in ./*.$ext(.N); do
+for ext in dng jpg jpeg png heic HEIC JPG JPEG PNG DNG; do
+    for file in "$target_dir"/*.$ext(.N); do
         if [[ -f "$file" ]]; then
-            process_file "$file" "photo"
+            process_file "$file" "photo" "$target_dir"
         fi
     done
 done
 
 # Process all video files
 for ext in mov mp4 MOV MP4; do
-    for file in ./*.$ext(.N); do
+    for file in "$target_dir"/*.$ext(.N); do
         if [[ -f "$file" ]]; then
-            process_file "$file" "video"
+            process_file "$file" "video" "$target_dir"
         fi
     done
 done
