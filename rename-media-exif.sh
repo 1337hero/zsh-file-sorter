@@ -17,7 +17,7 @@ process_file() {
         return
     fi
     
-    # Get EXIF creation date
+    # Get EXIF creation date in the desired format
     local exif_date=$(exiftool -DateTimeOriginal -d "%Y-%m-%d_%H.%M.%S" "$file" 2>/dev/null | awk -F': ' '{print $2}')
     
     if [[ -z "$exif_date" ]]; then
@@ -25,18 +25,28 @@ process_file() {
         return
     fi
     
-    # Generate MD5 hash of file (using first 8 characters)
+    # Generate MD5 hash of the file (first 8 characters)
     local hash=$(md5 -q "$file" | cut -c1-8)
     
     # Get file extension
     local ext=${filename:e}
     
-    # Create new filename
-    local new_filename="${exif_date}_${hash}.${ext}"
+    # Create the base of the new filename
+    local base="${exif_date}_${hash}"
+    local new_filename="${base}.${ext}"
+    local dest="${file:h}/$new_filename"
+    local counter=1
+
+    # If the destination file already exists, generate a unique filename
+    while [[ -e "$dest" ]]; do
+        new_filename="${base}_${counter}.${ext}"
+        dest="${file:h}/$new_filename"
+        (( counter++ ))
+    done
     
-    # Rename the file
+    # Rename the file only if it needs to be renamed
     if [[ "$filename" != "$new_filename" ]]; then
-        mv "$file" "${file:h}/$new_filename"
+        mv "$file" "$dest"
         print "Renamed: $filename → $new_filename"
     else
         print "Skipping: $filename (already in correct format)"
@@ -55,7 +65,7 @@ fi
 
 print "Looking in directory: $target_dir"
 
-# Process all image files
+# Process all image files with common extensions
 for ext in jpg jpeg png heic HEIC JPG JPEG PNG DNG; do
     for file in "$target_dir"/*.$ext(.N); do
         if [[ -f "$file" ]]; then
@@ -64,4 +74,4 @@ for ext in jpg jpeg png heic HEIC JPG JPEG PNG DNG; do
     done
 done
 
-print "Renaming complete!" 
+print "Renaming complete!"
